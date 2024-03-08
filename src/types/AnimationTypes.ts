@@ -4,6 +4,7 @@ export const Animations = {
   RIGHT: "right",
   DOWN: "down",
   FALL: "fall",
+  CLEAR: "clear",
 } as const;
 
 // Convert object key in a type

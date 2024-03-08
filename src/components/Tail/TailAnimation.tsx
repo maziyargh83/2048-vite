@@ -17,8 +17,5 @@ export const TailAnimationVariants: Partial<Record<AnimationKeyType, Variant>> =
       bottom: "100%",
       background: color,
       opacity: 0.3,
-      transition: {
-        duration: isDone ? 3 : 1,
-      },
     }),
   };

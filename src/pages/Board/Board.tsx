@@ -2,6 +2,7 @@ import { Board } from "@/components/Board/Board";
 import { Cell } from "@/components/Board/Cell";
 import { TileManager } from "@/components/Board/TileManager";
 import { Controls } from "@/components/Controls/Controls";
+import { Preview } from "@/components/Preview/Preview";
 import { config } from "@/config/config";
 import { v4 } from "uuid";
 
@@ -14,7 +15,7 @@ export const BoardPage = () => {
         })}
         <TileManager />
       </Board>
-
+      <Preview />
       <Controls />
     </div>
   );

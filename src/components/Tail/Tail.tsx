@@ -1,24 +1,32 @@
-import { memo, useCallback, useEffect, useState } from "react";
-import { motion, useAnimation, AnimatePresence } from "framer-motion";
+import { memo, useEffect, useState } from "react";
+import { motion, useAnimation } from "framer-motion";
 
 import { TileBlockBackgroundProps } from "@/types/TilesType";
-import { AnimationTypes } from "@/types/AnimationTypes";
+import { AnimationTypes, Animations } from "@/types/AnimationTypes";
 import { usePrevProps } from "@/hooks/usePrevProps";
 import { TailAnimationVariants } from "@/components/Tail/TailAnimation";
 import { TailManager } from "@/components/Tail/TailManager";
 import { TailProps } from "@/types/TailType";
+import { useTaskQueue } from "@/hooks/useTaskQueue";
+import { QueueStatusTypes } from "@/types/QueueTypes";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 const TailComponent = ({
   color,
   animation,
   id,
 }: TileBlockBackgroundProps & AnimationTypes & { id: string }) => {
+  const { updateTask } = useTaskQueue();
   const [isDone, setIsDone] = useState(false);
   const boxControls = useAnimation();
   const prev_animation = usePrevProps(animation);
-  const onDone = useCallback(() => {
+  const finishTask = useDebouncedCallback(() => {
+    if (animation == Animations.CLEAR) updateTask(id, QueueStatusTypes.DONE);
+  }, 310);
+  const onDone = () => {
     setIsDone(true);
-  }, []);
+  };
+
   const TailProps: TailProps = {
     animation,
     color,
@@ -39,7 +47,7 @@ const TailComponent = ({
     if (isDone) {
       boxControls.start(animation);
     }
-  }, [isDone]);
+  }, [isDone, animation]);
 
   return (
     <motion.div
@@ -51,10 +59,9 @@ const TailComponent = ({
         isDone,
       }}
       initial={animation}
+      onAnimationComplete={finishTask}
     >
-      <AnimatePresence mode="wait">
-        <TailManager {...TailProps} />
-      </AnimatePresence>
+      <TailManager {...TailProps} />
     </motion.div>
   );
 };

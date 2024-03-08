@@ -1,12 +1,19 @@
 import { useCellManager } from "@/hooks/useCellManager";
 import { usePreviewManager } from "@/hooks/usePreviewManager";
+import { useTaskQueue } from "@/hooks/useTaskQueue";
 import { TileStore } from "@/store/TilesStore";
 import { Animations } from "@/types/AnimationTypes";
+import {
+  QueueObjectType,
+  QueueStatusTypes,
+  QueueTypes,
+} from "@/types/QueueTypes";
 import { TileProps } from "@/types/TilesType";
 import { useAtom } from "jotai";
 import { useEffect } from "react";
 export const useMergeBlockGame = () => {
   const [tiles, setTiles] = useAtom(TileStore);
+  const { addTask, queue, removeTask } = useTaskQueue();
   const { addNewItemToCell, removeItemInCell, getCellPosition, getCellTiles } =
     useCellManager();
   const { initialPreviews, getFirstPreview, removePreview } =
@@ -43,9 +50,28 @@ export const useMergeBlockGame = () => {
     const resultMap = updateAllCurrentPositionToDown(newMap, tilesResult);
     setTiles(resultMap);
   };
-
-  const MoveDownAndRemove = (lastTile: TileProps, targetTile: TileProps) => {
+  const removeBlockId = (id: string) => {
     const newMap = new Map(tiles);
+    newMap.delete(id)!;
+    setTiles(newMap);
+    return newMap;
+  };
+  const updateSize = (
+    lastTile: TileProps,
+    targetTile: TileProps,
+    result: typeof tiles
+  ) => {
+    let newMap = new Map(result);
+
+    newMap.set(lastTile.id, {
+      ...lastTile,
+      animation: Animations.DOWN,
+      size: lastTile.size + targetTile.size,
+    });
+    setTiles(newMap);
+  };
+  const MoveDownAndRemove = (lastTile: TileProps, targetTile: TileProps) => {
+    let newMap = new Map(tiles);
 
     const tilesResult = removeItemInCell(targetTile.id, targetTile.currentCell);
 
@@ -53,6 +79,11 @@ export const useMergeBlockGame = () => {
       ...lastTile,
       animation: Animations.DOWN,
     });
+    newMap.set(targetTile.id, {
+      ...targetTile,
+      animation: "clear",
+    });
+    addTask(QueueTypes.REMOVE, targetTile.id, lastTile.id);
 
     const resultMap = updateAllCurrentPositionToDown(newMap, tilesResult);
     setTiles(resultMap);
@@ -94,17 +125,49 @@ export const useMergeBlockGame = () => {
       MoveDownAndRemove(lastTile, downBlock);
     }
   };
+  const checkBoard = () => {};
   const checkMerge = () => {
     const lastTile = getLastBlock();
     const tilesId = getCellTiles(lastTile.currentCell);
     const tilesCell = getValuesById(tilesId);
-    const upAndDownResult = checkUpAndDown(tilesCell, lastTile);
+    checkUpAndDown(tilesCell, lastTile);
 
-    // checkBoard();
+    checkBoard();
+  };
+  const queueAction = (queue: QueueObjectType) => {
+    const last = tiles.get(queue.reserveID!)!;
+    const target = tiles.get(queue.targetId!)!;
+    console.log({
+      last,
+      target,
+      queue,
+    });
+
+    switch (queue.type) {
+      case QueueTypes.REMOVE:
+        const result = removeBlockId(queue.targetId);
+        updateSize(last, target, result);
+        removeTask(queue.id);
+        break;
+    }
+  };
+  const handleQueue = (doneQueue: QueueObjectType[]) => {
+    doneQueue.map((q) => {
+      queueAction(q);
+    });
   };
   useEffect(() => {
     initialPreviews();
   }, []);
+  useEffect(() => {
+    const doneQueue = queue.filter((i) => i.status == QueueStatusTypes.DONE);
+    if (doneQueue.length > 0) {
+      handleQueue(doneQueue);
+    }
+  }, [queue]);
+  useEffect(() => {
+    if (tiles.size > 1) checkMerge();
+  }, [tiles]);
   return {
     createBlock,
     moveBlock,

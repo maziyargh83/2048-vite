@@ -5,7 +5,6 @@ import { Fragment } from "react/jsx-runtime";
 
 export const TileManager = () => {
   const tiles = useAtomValue(TileStore);
-
   return (
     <Fragment>
       {Array.from(tiles.entries()).map(([key, data]) => (
